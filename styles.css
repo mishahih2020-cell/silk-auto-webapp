@@ -72,17 +72,14 @@ textarea{resize:none;}
   transition:opacity .38s ease;}
 #splash.splash-hide{opacity:0;pointer-events:none;}
 
-.splash-car{position:absolute;top:50%;left:50%;width:clamp(180px,46vw,300px);
-  transform:translate(-50%,-58%);
-  filter:drop-shadow(0 10px 20px rgba(0,0,0,.45));}
-.splash-car svg{display:block;width:100%;height:auto;}
-.splash-car-shadow{position:absolute;left:16%;right:16%;bottom:-2%;height:10%;
-  background:radial-gradient(closest-side, rgba(0,0,0,.55), transparent 80%);}
+.splash-car{position:absolute;top:50%;left:50%;width:clamp(240px,60vw,420px);
+  transform:translate(-50%,-50%);}
+.splash-car img{display:block;width:100%;height:auto;}
 .splash-car.go{animation:carDrive 2.7s cubic-bezier(.6,.04,.9,.32) forwards;}
 @keyframes carDrive{
-  0%{transform:translate(-50%,-58%) translateX(0); filter:drop-shadow(0 10px 20px rgba(0,0,0,.45)) blur(0px); opacity:1;}
-  55%{filter:drop-shadow(0 10px 20px rgba(0,0,0,.45)) blur(2px); opacity:1;}
-  100%{transform:translate(-50%,-58%) translateX(165vw); filter:drop-shadow(0 10px 20px rgba(0,0,0,0)) blur(16px); opacity:0;}
+  0%{transform:translate(-50%,-50%) translateX(0); filter:blur(0px); opacity:1;}
+  55%{filter:blur(2px); opacity:1;}
+  100%{transform:translate(-50%,-50%) translateX(165vw); filter:blur(16px); opacity:0;}
 }
 
 .splash-logo-wrap{position:relative;z-index:2;text-align:center;padding:0 24px;max-width:92vw;
