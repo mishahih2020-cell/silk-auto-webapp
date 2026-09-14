@@ -3,13 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Potapov Auto — автомобили из Китая</title>
+<title>Potatuev Auto — автомобили из Китая</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Golos+Text:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-<div id="splash"><div class="splash-logo">Potapov <span>Auto</span></div></div>
+<div id="splash">
+  <div id="splashCar" class="splash-car">
+    <svg viewBox="0 0 220 84" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="carBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FBDFA0"/>
+          <stop offset="1" stop-color="#C98A2C"/>
+        </linearGradient>
+      </defs>
+      <path d="M10 56 Q10 47 19 47 L37 47 Q48 28 68 22 L104 22 Q123 22 133 34 L163 43 Q182 43 191 49 Q197 51 197 56 Q197 61 189 61 L18 61 Q10 61 10 56 Z" fill="url(#carBody)"/>
+      <path d="M47 45 Q56 32 70 27 L101 27 Q114 27 122 37 L152 44 Z" fill="#0A0908" opacity=".55"/>
+      <circle cx="47" cy="61" r="14" fill="#161310" stroke="url(#carBody)" stroke-width="3.5"/>
+      <circle cx="162" cy="61" r="14" fill="#161310" stroke="url(#carBody)" stroke-width="3.5"/>
+      <rect x="10" y="58" width="187" height="2.5" fill="#0A0908" opacity=".3"/>
+    </svg>
+    <div class="splash-car-shadow"></div>
+  </div>
+  <div id="splashLogo" class="splash-logo-wrap">
+    <div class="splash-logo">Potatuev <span>Auto</span></div>
+    <div class="splash-tagline">Импорт авто из Китая</div>
+  </div>
+</div>
 <div id="app"></div>
 <script src="cars.js"></script>
 <script src="app.js"></script>
