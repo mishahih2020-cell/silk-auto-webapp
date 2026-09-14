@@ -7,8 +7,11 @@ function initTelegram() {
   if (!tg) return;
   tg.ready();
   tg.expand();
+  try { tg.disableVerticalSwipes(); } catch (e) {}
+  try { tg.requestFullscreen(); } catch (e) {}
   try { tg.setHeaderColor('#121110'); } catch (e) {}
   try { tg.setBackgroundColor('#121110'); } catch (e) {}
+  try { tg.setBottomBarColor('#121110'); } catch (e) {}
 }
 
 // ---------- Icons ----------
