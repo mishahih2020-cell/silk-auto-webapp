@@ -63,6 +63,19 @@ textarea{resize:none;}
 
 .container{max-width:560px;margin:0 auto;width:100%;}
 
+/* Splash screen */
+#splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(120% 100% at 50% 32%, rgba(242,179,61,.12), transparent 60%), var(--bg);
+  transition:opacity .6s ease;}
+#splash.splash-hide{opacity:0;pointer-events:none;}
+.splash-logo{font-family:'Unbounded',system-ui,sans-serif;font-size:32px;font-weight:800;letter-spacing:.02em;
+  color:var(--tx1);animation:splashPulse 1.1s ease-in-out infinite;}
+.splash-logo span{color:var(--gold);}
+@keyframes splashPulse{
+  0%,100%{transform:scale(.9);filter:drop-shadow(0 0 8px rgba(242,179,61,.2));}
+  50%{transform:scale(1.1);filter:drop-shadow(0 0 38px rgba(242,179,61,.8));}
+}
+
 /* "Скоро появится" modal */
 #soonModal{display:none;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(8,7,6,.65);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}

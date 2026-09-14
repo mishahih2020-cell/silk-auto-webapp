@@ -1,4 +1,4 @@
-// ===== SILK AUTO — Telegram Mini App =====
+// ===== POTAPOV AUTO — Telegram Mini App =====
 
 const tg = window.Telegram && window.Telegram.WebApp;
 let tgBackHandler = null;
@@ -57,7 +57,7 @@ function iconFill(name, size) {
 // ---------- Favorites (persisted) ----------
 let favorites;
 try {
-  const saved = JSON.parse(localStorage.getItem('silkauto_favorites'));
+  const saved = JSON.parse(localStorage.getItem('potapovauto_favorites'));
   favorites = new Set(saved && saved.length ? saved : ['zeekr001', 'et7', 'l9']);
 } catch (e) {
   favorites = new Set(['zeekr001', 'et7', 'l9']);
@@ -65,7 +65,7 @@ try {
 function isFav(id) { return favorites.has(id); }
 function toggleFavorite(id) {
   favorites.has(id) ? favorites.delete(id) : favorites.add(id);
-  try { localStorage.setItem('silkauto_favorites', JSON.stringify([...favorites])); } catch (e) {}
+  try { localStorage.setItem('potapovauto_favorites', JSON.stringify([...favorites])); } catch (e) {}
   render();
 }
 
@@ -157,7 +157,7 @@ function hideComingSoon() {
 function screenHome() {
   const popular = CARS.slice(0, 4);
   return '<div class="screen"><div class="scroll pad-nav">' +
-    '<div class="topbar container"><div class="h" style="font-size:18px;font-weight:800;letter-spacing:.02em;">SILK <span style="color:var(--gold);">AUTO</span></div>' +
+    '<div class="topbar container"><div class="h" style="font-size:18px;font-weight:800;letter-spacing:.02em;">Potapov <span style="color:var(--gold);">Auto</span></div>' +
     '<div style="display:flex;align-items:center;gap:14px;"><div style="display:flex;align-items:center;gap:5px;color:var(--tx2);font-size:12px;">' + icon('mapPin', 15) + ' Москва</div>' +
     '<button class="icon-btn" data-nav="contacts">' + icon('bell', 18) + '</button></div></div>' +
 
@@ -489,7 +489,7 @@ function screenOrder() {
   }
   return '<div class="screen"><div class="scroll" style="padding-bottom:40px;">' +
     '<div class="topbar-back"><span class="back-arrow icon-btn" style="background:none;border:none;color:var(--tx1);" data-nav="profile">' + icon('chevronLeft', 20, 2) + '</span>' +
-    '<div><div class="h" style="font-size:18px;font-weight:800;">Заказ SA-260914</div><div style="font-size:11.5px;color:var(--tx3);margin-top:1px;">Оформлен 3 сентября 2026</div></div></div>' +
+    '<div><div class="h" style="font-size:18px;font-weight:800;">Заказ PA-260914</div><div style="font-size:11.5px;color:var(--tx3);margin-top:1px;">Оформлен 3 сентября 2026</div></div></div>' +
     '<div class="container" style="padding:0 20px;">' +
     '<div class="card" style="margin:18px 0 0;padding:12px;display:flex;gap:12px;align-items:center;">' +
     '<div style="width:80px;height:64px;border-radius:12px;overflow:hidden;flex:none;"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
@@ -512,7 +512,7 @@ function screenOrder() {
     '<div class="card" style="margin:16px 0 0;padding:13px;display:flex;align-items:center;gap:12px;">' +
     '<div class="h" style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#F7C25C,#E4A029);color:var(--btn-tx);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none;">АС</div>' +
     '<div style="flex:1;"><div style="font-size:13px;font-weight:700;">Артём Соколов</div><div style="font-size:11px;color:var(--tx3);margin-top:1px;">Ваш менеджер по заказу</div></div>' +
-    '<a href="https://t.me/silkauto_manager" target="_blank" rel="noopener" class="icon-btn" style="background:var(--gold-soft);border-color:var(--gold);">' + icon('telegram', 16) + '</a></div>' +
+    '<a href="https://t.me/potapovauto_manager" target="_blank" rel="noopener" class="icon-btn" style="background:var(--gold-soft);border-color:var(--gold);">' + icon('telegram', 16) + '</a></div>' +
     '</div></div></div>';
 }
 
@@ -525,13 +525,13 @@ function screenContacts() {
     '<div style="flex:1;"><div style="font-size:14px;font-weight:700;">Артём Соколов</div><div style="font-size:11.5px;color:var(--tx3);margin-top:1px;">Персональный менеджер</div>' +
     '<div style="display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--gold);font-size:11px;font-weight:600;"><div style="width:6px;height:6px;border-radius:50%;background:var(--gold);"></div>Отвечает в течение 15 минут</div></div></div>' +
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 0 0;">' +
-    ['phone;WhatsApp;https://wa.me/79991234567', 'telegram;Telegram;https://t.me/silkauto_manager', 'phone;Позвонить;tel:+79991234567'].map(s => {
+    ['phone;WhatsApp;https://wa.me/79991234567', 'telegram;Telegram;https://t.me/potapovauto_manager', 'phone;Позвонить;tel:+79991234567'].map(s => {
       const [ic, label, href] = s.split(';');
       return '<a href="' + href + '" target="_blank" rel="noopener" class="card" style="padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--tx1);">' +
         '<span style="color:var(--gold);">' + icon(ic, 20) + '</span><div style="font-size:11px;font-weight:600;">' + label + '</div></a>';
     }).join('') + '</div>' +
     '<div style="margin:16px 0 0;display:flex;flex-direction:column;gap:9px;">' +
-    infoLine('phone', '+7 (999) 123-45-67') + infoLine('telegram', '@silkauto_manager') + infoLine('clock', 'Пн–Вс, 9:00–21:00 (МСК)') + '</div>' +
+    infoLine('phone', '+7 (999) 123-45-67') + infoLine('telegram', '@potapovauto_manager') + infoLine('clock', 'Пн–Вс, 9:00–21:00 (МСК)') + '</div>' +
     '<div class="h" style="font-size:14.5px;font-weight:700;padding:22px 0 0;">Напишите нам</div>' +
     '<div id="contactForm" style="display:flex;flex-direction:column;gap:10px;padding:12px 0 0;">' +
     '<input id="cName" placeholder="Ваше имя"><input id="cPhone" placeholder="Телефон">' +
@@ -643,4 +643,14 @@ document.addEventListener('input', function (e) {
 });
 
 window.addEventListener('hashchange', render);
-window.addEventListener('DOMContentLoaded', function () { initTelegram(); render(); });
+window.addEventListener('DOMContentLoaded', function () {
+  initTelegram();
+  render();
+  const splash = document.getElementById('splash');
+  if (splash) {
+    setTimeout(function () {
+      splash.classList.add('splash-hide');
+      setTimeout(function () { splash.remove(); }, 650);
+    }, 2000);
+  }
+});
