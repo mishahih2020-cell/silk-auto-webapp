@@ -79,6 +79,15 @@ const CHE168_SEARCHES = [
   { url: 'https://www.che168.com/beijing/baoma/x5/', brand: 'BMW', model: 'X5' }
 ];
 
+// Фото с che168 (autoimg.cn) отдают HTTP 403, если Referer запроса — не сам che168
+// (проверено вручную 29.09.2026). dongchedi и encar так не делают, там прокси не нужен.
+// images.weserv.nl — бесплатный публичный прокси без регистрации: сам ходит за
+// картинкой без нашего Referer, из-за чего блокировка не срабатывает.
+function proxyImage(url) {
+  if (!url) return null;
+  return 'https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//, ''));
+}
+
 async function fetchChe168() {
   const out = [];
   for (const s of CHE168_SEARCHES) {
@@ -98,7 +107,7 @@ async function fetchChe168() {
         price: priceCny ? Math.round((priceCny * FX_TO_RUB.CNY) / 1000) * 1000 : null,
         type: raw.isnewenergy ? 'Электро' : 'Бензин',
         body: null,
-        img: raw.imageurl || null,
+        img: proxyImage(raw.imageurl),
         mileageKm: typeof raw.mileage === 'number' ? Math.round(raw.mileage * 10000) : null,
         power: null, accel: null, accel0: null, range: null, rangeKm: null, drive: null,
         options: [], source: 'che168', sourceUrl: null
