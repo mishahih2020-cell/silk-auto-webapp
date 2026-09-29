@@ -1,5 +1,9 @@
 // ===== POTATUEV AUTO — Telegram Mini App =====
 
+// Адрес Cloudflare Worker'а — доверенного посредника для админ-кнопки синхронизации.
+// Замените на реальный URL после `wrangler deploy` (см. admin-worker/README).
+const ADMIN_WORKER_URL = 'https://potatuev-auto-admin.YOUR-SUBDOMAIN.workers.dev';
+
 const tg = window.Telegram && window.Telegram.WebApp;
 let tgBackHandler = null;
 
@@ -487,7 +491,7 @@ function screenProfile() {
     '<div class="card" style="padding:13px;text-align:center;cursor:pointer;" data-nav="order"><div class="h" style="font-size:19px;font-weight:800;color:var(--gold);">1</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;">заказ в пути</div></div></div>' +
     '<div class="card" style="margin:20px 0 0;padding:4px 14px;">' +
     mi('doc', 'Мои заявки', 2) + mi('truck', 'Мои заказы', 1, 'order') + mi('clock', 'История заказов') + mi('heart', 'Избранное', [...favorites].length, 'favorites') +
-    mi('wallet', 'Способы оплаты') + mi('grid', 'Услуги', null, 'services') + mi('home', 'Как мы работаем', null, 'how') + mi('bell', 'Контакты и поддержка', null, 'contacts') + '</div>' +
+    mi('wallet', 'Способы оплаты') + mi('grid', 'Услуги', null, 'services') + mi('home', 'Как мы работаем', null, 'how') + mi('bell', 'Контакты и поддержка', null, 'contacts') + mi('sliders', 'Администрирование', null, 'admin') + '</div>' +
     '<div style="margin:14px 0 30px;display:flex;align-items:center;gap:10px;padding:14px 4px;color:var(--danger);cursor:pointer;" data-soon="Выход из аккаунта">' +
     icon('logout', 18) + '<div style="font-size:13.5px;font-weight:600;">Выйти из аккаунта</div></div>' +
     '</div></div>' + bottomNav('profile') + '</div>';
@@ -559,17 +563,122 @@ function screenContacts() {
     '</div></div></div></div>';
 }
 
+function screenAdmin() {
+  let savedPassword = '';
+  try { savedPassword = localStorage.getItem('potatuevauto_admin_pw') || ''; } catch (e) {}
+  const isRunning = adminStatus && (adminStatus.status === 'queued' || adminStatus.status === 'in_progress');
+  return '<div class="screen"><div class="scroll" style="padding-bottom:40px;">' +
+    topBack('Админка', 'Синхронизация каталога', 'profile') +
+    '<div class="container" style="padding:20px 20px 0;">' +
+    '<div class="card" style="padding:16px;">' +
+    '<div style="font-size:13.5px;font-weight:700;">Пароль администратора</div>' +
+    '<input id="adminPasswordField" type="password" placeholder="Пароль" value="' + savedPassword.replace(/"/g, '&quot;') + '" style="margin-top:10px;">' +
+    (adminError ? '<div style="color:var(--danger);font-size:12px;margin-top:8px;">' + adminError + '</div>' : '') +
+    '<button class="btn-primary" style="width:100%;margin-top:14px;" ' + (isRunning ? 'disabled' : '') + ' data-admin-sync>' +
+    (isRunning ? 'Обновление идёт…' : 'Обновить базу машин') + '</button>' +
+    (adminStatus ? renderAdminStatus(adminStatus) : '') +
+    '<div style="font-size:11px;color:var(--tx3);margin-top:14px;line-height:1.5;">Запускает подтягивание актуальных данных с che168, dongchedi и encar. Обычно занимает 1–3 минуты.</div>' +
+    '</div></div></div></div>';
+}
+
+function progressPercent(text) {
+  if (!text) return null;
+  const m = text.match(/получено (\d+) из (\d+)/);
+  if (m && Number(m[2]) > 0) return Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100));
+  return null;
+}
+function renderAdminStatus(s) {
+  if (s.status === 'queued' || s.status === 'in_progress') {
+    const pct = progressPercent(s.progressText);
+    return '<div style="margin-top:14px;">' +
+      '<div style="height:8px;border-radius:4px;background:var(--bg3);overflow:hidden;">' +
+      '<div style="height:100%;border-radius:4px;background:var(--gold);width:' + (pct != null ? pct : 30) + '%;' + (pct == null ? 'animation:pulse 1.4s ease-in-out infinite;' : '') + '"></div></div>' +
+      '<div style="font-size:12px;color:var(--tx2);margin-top:8px;">' + (s.progressText || 'Запущено, ждём первых данных…') + '</div>' +
+      '</div>';
+  }
+  if (s.status === 'completed') {
+    const ok = s.conclusion === 'success';
+    return '<div style="margin-top:14px;padding:12px;border-radius:12px;background:' + (ok ? 'rgba(111,191,115,.12)' : 'rgba(217,108,90,.12)') + ';">' +
+      '<div style="font-size:13px;font-weight:700;color:' + (ok ? 'var(--ok)' : 'var(--danger)') + ';">' + (ok ? 'Готово' : 'Ошибка синхронизации') + '</div>' +
+      '<div style="font-size:12px;color:var(--tx2);margin-top:4px;">' + (s.progressText || (ok ? 'Каталог обновлён.' : 'Подробности — в логе GitHub Actions.')) + '</div>' +
+      (s.html_url ? '<a href="' + s.html_url + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold);display:block;margin-top:6px;">Открыть лог в GitHub →</a>' : '') +
+      '</div>';
+  }
+  return '';
+}
+
+let adminStatus = null;
+let adminError = '';
+let adminPollTimer = null;
+function stopAdminPolling() {
+  if (adminPollTimer) { clearInterval(adminPollTimer); adminPollTimer = null; }
+}
+async function checkAdminStatusOnce() {
+  try {
+    const res = await fetch(ADMIN_WORKER_URL + '/status');
+    const data = await res.json();
+    adminStatus = data;
+    if (data.status === 'queued' || data.status === 'in_progress') startAdminPolling();
+    if (currentRoute().split('/')[0] === 'admin') render();
+  } catch (e) { /* воркер ещё не задеплоен или недоступен — молча игнорируем */ }
+}
+function startAdminPolling() {
+  stopAdminPolling();
+  adminPollTimer = setInterval(async function () {
+    try {
+      const res = await fetch(ADMIN_WORKER_URL + '/status');
+      const data = await res.json();
+      adminStatus = data;
+      if (data.status === 'completed') stopAdminPolling();
+      if (currentRoute().split('/')[0] === 'admin') render();
+    } catch (e) { /* сеть моргнула — попробуем на следующем тике */ }
+  }, 4000);
+}
+async function triggerAdminSync() {
+  const field = document.getElementById('adminPasswordField');
+  const password = field ? field.value : '';
+  adminError = '';
+  try {
+    const res = await fetch(ADMIN_WORKER_URL + '/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password })
+    });
+    if (res.status === 401) {
+      adminError = 'Неверный пароль';
+      render();
+      return;
+    }
+    if (!res.ok) {
+      adminError = 'Не удалось запустить обновление — попробуйте ещё раз через минуту.';
+      render();
+      return;
+    }
+    try { localStorage.setItem('potatuevauto_admin_pw', password); } catch (e) {}
+    adminStatus = { status: 'queued', progressText: 'Запрос отправлен…' };
+    render();
+    startAdminPolling();
+  } catch (e) {
+    adminError = 'Нет связи с сервером обновления.';
+    render();
+  }
+}
+
 // ---------- Router ----------
 const ROOT_TABS = ['home', 'catalog', 'favorites', 'profile'];
-const BACK_TARGETS = { car: 'catalog', finder: 'home', calculator: 'home', how: 'home', services: 'home', contacts: 'home', order: 'profile' };
-const SCREEN_MAP = { home: screenHome, catalog: screenCatalog, finder: screenFinder, calculator: screenCalculator, how: screenHow, services: screenServices, favorites: screenFavorites, profile: screenProfile, order: screenOrder, contacts: screenContacts };
+const BACK_TARGETS = { car: 'catalog', finder: 'home', calculator: 'home', how: 'home', services: 'home', contacts: 'home', order: 'profile', admin: 'profile' };
+const SCREEN_MAP = { home: screenHome, catalog: screenCatalog, finder: screenFinder, calculator: screenCalculator, how: screenHow, services: screenServices, favorites: screenFavorites, profile: screenProfile, order: screenOrder, contacts: screenContacts, admin: screenAdmin };
 
 function currentRoute() {
   return location.hash.replace(/^#\/?/, '') || 'home';
 }
+let lastRenderedRoot = null;
 function render() {
   const route = currentRoute();
   const root = route.split('/')[0];
+  if (lastRenderedRoot === 'admin' && root !== 'admin') stopAdminPolling();
+  if (root === 'admin' && lastRenderedRoot !== 'admin') checkAdminStatusOnce();
+  lastRenderedRoot = root;
   const html = root === 'car' ? screenCar(route.split('/')[1]) : (SCREEN_MAP[root] || screenHome)();
   document.getElementById('app').innerHTML = html;
   const sc = document.querySelector('.scroll');
@@ -642,6 +751,9 @@ document.addEventListener('click', function (e) {
 
   const favEl = e.target.closest('[data-fav]');
   if (favEl) { toggleFavorite(favEl.dataset.fav); return; }
+
+  const adminSyncEl = e.target.closest('[data-admin-sync]');
+  if (adminSyncEl) { triggerAdminSync(); return; }
 
   const soonEl = e.target.closest('[data-soon]');
   if (soonEl) { showComingSoon(soonEl.dataset.soon); return; }
