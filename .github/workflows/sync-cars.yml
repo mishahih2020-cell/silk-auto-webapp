@@ -1,0 +1,34 @@
+name: Обновить базу машин
+
+# Кнопка запуска — во вкладке репозитория "Actions" -> "Обновить базу машин" -> "Run workflow".
+# Перед первым запуском добавьте секрет CARAPIS_API_KEY:
+# Settings -> Secrets and variables -> Actions -> New repository secret.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Синхронизация с Carapis
+        env:
+          CARAPIS_API_KEY: ${{ secrets.CARAPIS_API_KEY }}
+        run: node scripts/sync-cars.js
+
+      - name: Сохранить обновлённый каталог
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cars.js
+          git diff --cached --quiet || git commit -m "Автообновление каталога машин из Carapis"
+          git push

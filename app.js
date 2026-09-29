@@ -54,6 +54,9 @@ function iconFill(name, size) {
   return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.3">' + (ICONS[name] || '') + '</svg>';
 }
 
+// Резервное фото, если ссылка с сайта-источника не открылась (хотлинк-защита и т.п.)
+const IMG_FALLBACK = "this.onerror=null;this.src='assets/car_zeekr001.jpg';";
+
 // ---------- Favorites (persisted) ----------
 let favorites;
 try {
@@ -100,21 +103,24 @@ function advantage(iconName, title, desc) {
 }
 function miniCard(c) {
   return '<div class="card" style="flex:none;width:150px;overflow:hidden;cursor:pointer;" data-nav="car/' + c.id + '">' +
-    '<div style="height:100px;position:relative;"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;">' +
+    '<div style="height:100px;position:relative;"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;">' +
     '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,17,16,0) 55%,rgba(18,17,16,.85) 100%);"></div></div>' +
     '<div style="padding:10px 12px 12px;"><div style="font-size:12.5px;font-weight:700;">' + c.brand + ' ' + c.model + '</div>' +
-    '<div style="font-size:10.5px;color:var(--tx3);margin:2px 0 6px;">' + c.year + ' год</div>' +
+    '<div style="font-size:10.5px;color:var(--tx3);margin:2px 0 6px;">' + (c.year ? c.year + ' год' : '&nbsp;') + '</div>' +
     '<div style="font-size:12.5px;font-weight:700;color:var(--gold);">' + formatPrice(c.price) + '</div></div></div>';
+}
+function metaLine(c) {
+  return [c.year, c.type, c.body].filter(Boolean).join(' · ');
 }
 function carRow(c) {
   const fav = isFav(c.id);
   return '<div class="card car-row" style="cursor:pointer;" data-nav="car/' + c.id + '">' +
-    '<div class="car-thumb" style="width:104px;height:88px;"><img src="' + c.img + '"></div>' +
+    '<div class="car-thumb" style="width:104px;height:88px;"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '"></div>' +
     '<div style="flex:1;padding:2px 0;">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
     '<div style="font-size:13.5px;font-weight:700;">' + c.brand + ' ' + c.model + '</div>' +
     '<button class="heart-btn" data-fav="' + c.id + '" style="width:28px;height:28px;background:none;color:' + (fav ? 'var(--gold)' : 'var(--tx3)') + ';">' + (fav ? iconFill('heart', 16) : icon('heart', 16)) + '</button>' +
-    '</div><div style="font-size:11px;color:var(--tx3);margin:2px 0 8px;">' + c.year + ' · ' + c.type + ' · ' + c.body + '</div>' +
+    '</div><div style="font-size:11px;color:var(--tx3);margin:2px 0 8px;">' + metaLine(c) + '</div>' +
     '<div style="font-size:14px;font-weight:700;color:var(--gold);">' + formatPrice(c.price) + '</div></div></div>';
 }
 function specTile(iconName, value, label) {
@@ -234,11 +240,14 @@ function catFilterChips(title, options, isOn, field) {
     options.map(o => '<span class="' + (isOn(o.value) ? 'chip-on' : 'chip') + '" style="cursor:pointer;font-size:11.5px;padding:7px 12px;" data-catfilter="' + field + ':' + o.value + '">' + o.label + '</span>').join('') +
     '</div></div>';
 }
+function uniqueValues(field) {
+  return [...new Set(CARS.map(c => c[field]).filter(Boolean))].sort();
+}
 function screenCatalog() {
   const f = catalogFilters;
-  const brandOpts = ['Xiaomi', 'Zeekr', 'NIO', 'BYD', 'Li Auto'].map(v => ({ value: v, label: v }));
-  const bodyOpts = ['Седан', 'Кроссовер', 'Лифтбэк'].map(v => ({ value: v, label: v }));
-  const engineOpts = ['Электро', 'Гибрид'].map(v => ({ value: v, label: v }));
+  const brandOpts = uniqueValues('brand').map(v => ({ value: v, label: v }));
+  const bodyOpts = uniqueValues('body').map(v => ({ value: v, label: v }));
+  const engineOpts = uniqueValues('type').map(v => ({ value: v, label: v }));
   const priceOpts = [4000000, 6000000, 8000000, 10000000].map(v => ({ value: v, label: 'до ' + (v / 1000000) + ' млн' }));
   const yearOpts = [2022, 2023, 2024, 2025].map(v => ({ value: v, label: v + '+' }));
   const accelOpts = [4, 5, 6, 8].map(v => ({ value: v, label: 'до ' + v + ' сек' }));
@@ -271,11 +280,19 @@ function screenCatalog() {
     '</div>' + bottomNav('catalog') + '</div>';
 }
 
+const ENGINE_ADJ = { 'Электро': 'Электрический', 'Гибрид': 'Гибридный', 'Бензин': 'Бензиновый', 'Дизель': 'Дизельный' };
 function screenCar(id) {
   const c = CARS.find(x => x.id === id) || CARS[0];
   const fav = isFav(c.id);
+  const subtitleParts = [ENGINE_ADJ[c.type] || c.type, c.body ? c.body.toLowerCase() : '', c.drive].filter(Boolean);
+  const specTiles = [
+    c.power ? specTile('gauge', c.power, 'Мощность') : '',
+    c.accel ? specTile('clock', c.accel, 'Разгон 0–100') : '',
+    (c.mileageKm != null) ? specTile('battery', c.mileageKm.toLocaleString('ru-RU') + ' км', 'Пробег') : (c.range ? specTile('battery', c.range, 'Запас хода') : ''),
+    c.drive ? specTile('drive', c.drive, 'Привод') : ''
+  ].filter(Boolean).join('');
   return '<div class="screen"><div class="scroll pad-cta">' +
-    '<div style="position:relative;"><img src="' + c.img + '" style="width:100%;height:280px;object-fit:cover;">' +
+    '<div style="position:relative;"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:280px;object-fit:cover;">' +
     '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,17,16,.55) 0%,rgba(18,17,16,0) 22%,rgba(18,17,16,0) 70%,rgba(18,17,16,.9) 100%);"></div>' +
     '<div style="position:absolute;top:22px;left:20px;right:20px;display:flex;justify-content:space-between;">' +
     '<span class="icon-btn" style="background:rgba(18,17,16,.55);border:none;" data-nav="catalog">' + icon('chevronLeft', 18, 2) + '</span>' +
@@ -283,14 +300,13 @@ function screenCar(id) {
     '</div></div>' +
     '<div class="container" style="padding:18px 20px 0;">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-    '<div><div class="h" style="font-size:21px;font-weight:800;">' + c.brand + ' ' + c.model + ' ' + c.year + '</div>' +
-    '<div class="subtitle">' + (c.type === 'Электро' ? 'Электрический' : 'Гибридный') + ' ' + c.body.toLowerCase() + ' · ' + c.drive + '</div></div>' +
+    '<div><div class="h" style="font-size:21px;font-weight:800;">' + c.brand + ' ' + c.model + (c.year ? ' ' + c.year : '') + '</div>' +
+    '<div class="subtitle">' + subtitleParts.join(' · ') + '</div></div>' +
     '<span class="badge">В наличии</span></div>' +
     '<div class="h" style="font-size:24px;font-weight:800;color:var(--gold);margin-top:14px;">' + formatPrice(c.price) + '</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">' +
-    specTile('gauge', c.power, 'Мощность') + specTile('clock', c.accel, 'Разгон 0–100') + specTile('battery', c.range, 'Запас хода') + specTile('drive', c.drive, 'Привод') + '</div>' +
-    '<div class="h" style="font-size:15px;font-weight:700;margin-top:22px;">Комплектация</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">' + c.options.map(o => '<span class="chip">' + o + '</span>').join('') + '</div>' +
+    (specTiles ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">' + specTiles + '</div>' : '') +
+    (c.options && c.options.length ? '<div class="h" style="font-size:15px;font-weight:700;margin-top:22px;">Комплектация</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">' + c.options.map(o => '<span class="chip">' + o + '</span>').join('') + '</div>' : '') +
     '<div class="h" style="font-size:15px;font-weight:700;margin-top:22px;">Оплата и доставка</div>' +
     '<div style="display:flex;flex-direction:column;gap:9px;margin-top:10px;">' +
     infoLine('truck', 'Доставка 30–35 дней, ж/д + автовоз') + infoLine('wallet', 'Возможна рассрочка от банка-партнёра') +
@@ -300,7 +316,7 @@ function screenCar(id) {
     '<button class="btn-primary" style="flex:1;" data-nav="order">Оставить заявку</button></div></div>';
 }
 
-let finderState = { budget: '4–6 млн', brands: new Set(['Zeekr']), body: 'Лифтбэк', year: 2023, fuel: 'Электро' };
+let finderState = { budget: null, brands: new Set(), body: null, year: null, fuel: null };
 function matchesFinder(c) {
   if (finderState.brands.size && !finderState.brands.has(c.brand)) return false;
   if (finderState.body && c.body !== finderState.body) return false;
@@ -317,10 +333,10 @@ function matchesFinder(c) {
 }
 function screenFinder() {
   const budgets = ['до 4 млн', '4–6 млн', '6–9 млн', '9 млн +'];
-  const brands = ['Zeekr', 'NIO', 'Xiaomi', 'BYD', 'Li Auto'];
-  const bodies = ['Седан', 'Кроссовер', 'Лифтбэк'];
+  const brands = uniqueValues('brand');
+  const bodies = uniqueValues('body');
   const years = [2022, 2023, 2024, 2025];
-  const fuels = ['Электро', 'Гибрид'];
+  const fuels = uniqueValues('type');
   const results = CARS.filter(matchesFinder);
   function chipRow(title, arr, isOn, field) {
     return '<div class="container" style="padding:20px 20px 0;"><div style="font-size:13px;font-weight:700;">' + title + '</div>' +
@@ -338,7 +354,7 @@ function screenFinder() {
     '<div class="container" style="padding:0 20px;"><div class="card" style="margin:26px 0 0;padding:16px;">' +
     '<div style="display:flex;align-items:center;gap:8px;color:var(--gold);">' + icon('star', 17) + '<div style="font-size:13.5px;font-weight:700;">Найдено ' + results.length + ' ' + pluralRu(results.length, 'автомобиль', 'автомобиля', 'автомобилей') + '</div></div>' +
     '<div style="font-size:12px;color:var(--tx2);margin-top:6px;">по вашим параметрам' + (results.length ? ', включая:' : '') + '</div>' +
-    (results.length ? '<div style="display:flex;gap:8px;margin-top:12px;">' + results.slice(0, 3).map(c => '<div style="width:64px;height:52px;border-radius:11px;overflow:hidden;cursor:pointer;" data-nav="car/' + c.id + '"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;"></div>').join('') + '</div>' : '') +
+    (results.length ? '<div style="display:flex;gap:8px;margin-top:12px;">' + results.slice(0, 3).map(c => '<div style="width:64px;height:52px;border-radius:11px;overflow:hidden;cursor:pointer;" data-nav="car/' + c.id + '"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;"></div>').join('') + '</div>' : '') +
     '</div></div></div>' +
     '<div class="sticky-cta" style="display:block;"><button class="btn-primary" style="width:100%;" data-nav="order">Оставить заявку на подбор</button></div></div>';
 }
@@ -346,7 +362,7 @@ function screenFinder() {
 let calcCarId = 'zeekr001';
 let calcPickerOpen = false;
 function screenCalculator() {
-  const c = CARS.find(x => x.id === calcCarId) || CARS[1];
+  const c = CARS.find(x => x.id === calcCarId) || CARS[0];
   const logistics = 320000;
   const customs = Math.round(c.price * 0.18 / 10000) * 10000;
   const services = 400000;
@@ -358,8 +374,8 @@ function screenCalculator() {
   const pickerList = calcPickerOpen ?
     '<div class="card" style="margin:8px 0 0;padding:6px;">' +
     CARS.map(x => '<div style="display:flex;align-items:center;gap:10px;padding:9px;border-radius:12px;cursor:pointer;' + (x.id === calcCarId ? 'background:var(--gold-soft);' : '') + '" data-pick-calc-car="' + x.id + '">' +
-      '<div style="width:52px;height:40px;border-radius:9px;overflow:hidden;flex:none;"><img src="' + x.img + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
-      '<div style="flex:1;"><div style="font-size:12.5px;font-weight:700;">' + x.brand + ' ' + x.model + '</div><div style="font-size:10.5px;color:var(--tx3);margin-top:1px;">' + x.year + ' · ' + formatPrice(x.price) + '</div></div>' +
+      '<div style="width:52px;height:40px;border-radius:9px;overflow:hidden;flex:none;"><img src="' + x.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
+      '<div style="flex:1;"><div style="font-size:12.5px;font-weight:700;">' + x.brand + ' ' + x.model + '</div><div style="font-size:10.5px;color:var(--tx3);margin-top:1px;">' + (x.year ? x.year + ' · ' : '') + formatPrice(x.price) + '</div></div>' +
       (x.id === calcCarId ? '<span style="color:var(--gold);">' + icon('check', 16, 2.2) + '</span>' : '') +
       '</div>').join('') + '</div>' : '';
   return '<div class="screen"><div class="scroll pad-cta">' +
@@ -367,9 +383,9 @@ function screenCalculator() {
     '<div class="container" style="padding:6px 20px 0;font-size:12.5px;color:var(--tx2);line-height:1.4;">Выберите автомобиль — рассчитаем полную стоимость доставки из Китая под ключ.</div>' +
     '<div class="container" style="padding:0 20px;">' +
     '<div class="card" style="margin:20px 0 0;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;" data-toggle-calc-picker>' +
-    '<div style="width:64px;height:52px;border-radius:12px;overflow:hidden;flex:none;"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
-    '<div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">' + c.brand + ' ' + c.model + ', ' + c.year + '</div>' +
-    '<div style="font-size:11px;color:var(--tx3);margin-top:2px;">' + c.type + ' · ' + c.drive + '</div></div>' +
+    '<div style="width:64px;height:52px;border-radius:12px;overflow:hidden;flex:none;"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
+    '<div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">' + c.brand + ' ' + c.model + (c.year ? ', ' + c.year : '') + '</div>' +
+    '<div style="font-size:11px;color:var(--tx3);margin-top:2px;">' + metaLine({ year: null, type: c.type, body: c.drive }) + '</div></div>' +
     '<div style="display:flex;align-items:center;gap:4px;color:var(--gold);font-size:12px;font-weight:600;">Выбрать авто' + icon(calcPickerOpen ? 'chevronDown' : 'chevronRight', 14, 2) + '</div></div>' +
     pickerList +
     '<div class="card" style="margin:20px 0 0;padding:6px 16px 4px;">' +
@@ -441,11 +457,11 @@ function screenFavorites() {
     '<div class="container" style="display:flex;flex-direction:column;gap:12px;padding:8px 20px 0;">' +
     (list.length ? list.map(c =>
       '<div class="card" style="overflow:hidden;">' +
-      '<div style="position:relative;height:150px;cursor:pointer;" data-nav="car/' + c.id + '"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;">' +
+      '<div style="position:relative;height:150px;cursor:pointer;" data-nav="car/' + c.id + '"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;">' +
       '<button class="heart-btn" data-fav="' + c.id + '" style="position:absolute;top:12px;right:12px;width:34px;height:34px;color:var(--gold);">' + iconFill('heart', 17) + '</button></div>' +
       '<div style="padding:13px 14px;display:flex;align-items:center;justify-content:space-between;">' +
       '<div><div style="font-size:14px;font-weight:700;">' + c.brand + ' ' + c.model + '</div>' +
-      '<div style="font-size:11px;color:var(--tx3);margin:2px 0 4px;">' + c.year + ' год · ' + c.type + '</div>' +
+      '<div style="font-size:11px;color:var(--tx3);margin:2px 0 4px;">' + metaLine(c) + '</div>' +
       '<div style="font-size:14px;font-weight:700;color:var(--gold);">' + formatPrice(c.price) + '</div></div>' +
       '<button class="btn-secondary" data-nav="order">Заявка</button></div></div>'
     ).join('') : emptyState('Пока пусто', 'Добавляйте автомобили в избранное нажатием на сердце')) + '</div>' +
@@ -478,7 +494,9 @@ function screenProfile() {
 }
 
 function screenOrder() {
-  const c = CARS[1]; // Zeekr 001 — демонстрационный активный заказ
+  // Фиксированный демо-заказ — намеренно не зависит от CARS, чтобы обновление
+  // каталога (синк с Carapis) не меняло историю уже оформленного заказа.
+  const c = { brand: 'Zeekr', model: '001', year: 2025, img: 'assets/car_zeekr001.jpg', type: 'Электро', drive: 'Полный (AWD)', price: 4950000 };
   function step(n, title, sub, state) {
     const style = state === 'done' ? 'background:var(--ok);color:#0F1A10;' : state === 'active' ? 'background:var(--gold);color:var(--btn-tx);' : 'background:var(--bg3);border:1.5px solid var(--line);color:var(--tx3);';
     return '<div style="display:flex;gap:14px;padding-bottom:22px;position:relative;">' +
@@ -492,7 +510,7 @@ function screenOrder() {
     '<div><div class="h" style="font-size:18px;font-weight:800;">Заказ PA-260914</div><div style="font-size:11.5px;color:var(--tx3);margin-top:1px;">Оформлен 3 сентября 2026</div></div></div>' +
     '<div class="container" style="padding:0 20px;">' +
     '<div class="card" style="margin:18px 0 0;padding:12px;display:flex;gap:12px;align-items:center;">' +
-    '<div style="width:80px;height:64px;border-radius:12px;overflow:hidden;flex:none;"><img src="' + c.img + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
+    '<div style="width:80px;height:64px;border-radius:12px;overflow:hidden;flex:none;"><img src="' + c.img + '" onerror="' + IMG_FALLBACK + '" style="width:100%;height:100%;object-fit:cover;"></div>' +
     '<div style="flex:1;"><div style="font-size:14px;font-weight:700;">' + c.brand + ' ' + c.model + ', ' + c.year + '</div>' +
     '<div style="font-size:11px;color:var(--tx3);margin-top:2px;">' + c.type + ' · ' + c.drive + '</div>' +
     '<div style="font-size:14px;font-weight:700;color:var(--gold);margin-top:4px;">' + c.price.toLocaleString('ru-RU') + ' ₽</div></div></div>' +
